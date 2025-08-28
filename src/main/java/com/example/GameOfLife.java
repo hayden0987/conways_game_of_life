@@ -9,16 +9,14 @@ import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.Button;
-import javafx.scene.control.ChoiceBox;
-import javafx.scene.control.TextField;
+import javafx.scene.input.MouseButton;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
-import javafx.scene.paint.Color;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
 
-public class GameOfLife extends Application
-{
+public class GameOfLife extends Application {
+
     private static final int CELL_SIZE = 20;
     Set<Point> aliveCells = new HashSet<>();
     private double offsetX = 0; // camera x position
@@ -29,12 +27,13 @@ public class GameOfLife extends Application
     private Text populationText;
     private Text generationText;
     private Canvas canvas;
+    private boolean dragDetected;
 
     @Override
     public void start(Stage stage) throws Exception {
         // Get the game menu
         HBox gameMenu = initGameMenu();
-        
+
         // Get the game canvas
         canvas = drawGameCanvas();
 
@@ -48,8 +47,7 @@ public class GameOfLife extends Application
         stage.show();
     }
 
-    public static void main( String[] args )
-    {
+    public static void main(String[] args) {
         launch(args);
     }
 
@@ -74,7 +72,7 @@ public class GameOfLife extends Application
     }
 
     public Canvas drawGameCanvas() {
-        Canvas canvas = new Canvas(800, 600);
+        canvas = new Canvas(800, 600);
         GraphicsContext gc = canvas.getGraphicsContext2D();
 
         // Example cells
@@ -86,11 +84,13 @@ public class GameOfLife extends Application
 
         // Allow dragging
         canvas.setOnMousePressed(e -> {
+            dragDetected = false;
             dragStartX = e.getX();
             dragStartY = e.getY();
         });
 
         canvas.setOnMouseDragged(e -> {
+            dragDetected = true;
             offsetX -= e.getX() - dragStartX;
             offsetY -= e.getY() - dragStartY;
             dragStartX = e.getX();
@@ -99,13 +99,28 @@ public class GameOfLife extends Application
             updateGameMenu();
         });
 
+        canvas.setOnMouseReleased(e -> {
+            // Handle clicking a cell to alive/unalive it
+            if (!dragDetected && e.getButton() == MouseButton.PRIMARY) {
+                int x = (int) Math.floor(((e.getX() + offsetX) / CELL_SIZE));
+                int y = (int) Math.floor(((e.getY() + offsetY) / CELL_SIZE));
+                Point target = new Point(x, y);
+
+                if (aliveCells.contains(target)) {
+                    aliveCells.remove(target);
+                } else {
+                    aliveCells.add(target);
+                }
+                draw(gc);
+            }
+        });
         return canvas;
     }
 
     // Updates the game menu
     private void updateGameMenu() {
-        xCoordText.setText("X: " + (int)offsetX);
-        yCoordText.setText("Y: " + (int)-offsetY);
+        xCoordText.setText("X: " + (int) offsetX);
+        yCoordText.setText("Y: " + (int) -offsetY);
         populationText.setText("Population: " + aliveCells.size());
         // TODO: add generation update
     }
@@ -122,45 +137,43 @@ public class GameOfLife extends Application
         double height = gc.getCanvas().getHeight();
 
         // Draw grid lines relative to the offset
-        for(int x = (int)(-offsetX % CELL_SIZE); x <width; x += CELL_SIZE) {
+        for (int x = (int) (-offsetX % CELL_SIZE); x < width; x += CELL_SIZE) {
             gc.strokeLine(x, 0, x, height);
         }
-        for(int y = (int)(-offsetY % CELL_SIZE); y < height; y += CELL_SIZE) {
+        for (int y = (int) (-offsetY % CELL_SIZE); y < height; y += CELL_SIZE) {
             gc.strokeLine(0, y, width, y);
         }
 
         // Draw alive cells
         gc.setFill(javafx.scene.paint.Color.BLACK);
-        for(Point p : aliveCells) {
+        for (Point p : aliveCells) {
             double screenX = p.x * CELL_SIZE - offsetX;
             double screenY = p.y * CELL_SIZE - offsetY;
             gc.fillRect(screenX, screenY, CELL_SIZE, CELL_SIZE);
         }
     }
-
-    public void initGameCanvas() {
-        Text sizeText = new Text("Set grid size: ");
-        TextField gridSizeField = new TextField();
-        Text colorText = new Text("Set Color:  ");
-        ChoiceBox<Color> colorPickerBox = new ChoiceBox<>();
-        
-        
-        Button startButton = new Button();
-        startButton.setOnAction(event -> {
-            // Start the game
-        });
-    }
 }
 
 class Point {
+
     final int x, y;
-    Point(int x, int y) { this.x = x; this.y = y; }
+
+    Point(int x, int y) {
+        this.x = x;
+        this.y = y;
+    }
 
     @Override
     public boolean equals(Object o) {
-        if(!(o instanceof Point)) return false;
+        if (!(o instanceof Point)) {
+            return false;
+        }
         Point p = (Point) o;
         return x == p.x && y == p.y;
     }
-    @Override public int hashCode() { return x * 31 + y; }
+
+    @Override
+    public int hashCode() {
+        return x * 31 + y;
+    }
 }
