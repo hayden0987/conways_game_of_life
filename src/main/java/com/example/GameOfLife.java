@@ -28,6 +28,7 @@ public class GameOfLife extends Application {
     private Text generationText;
     private Canvas canvas;
     private boolean dragDetected;
+    private int generation;
 
     @Override
     public void start(Stage stage) throws Exception {
@@ -55,8 +56,9 @@ public class GameOfLife extends Application {
         xCoordText = new Text("X: " + offsetX);
         yCoordText = new Text("Y: " + offsetY);
         populationText = new Text("Population: " + aliveCells.size());
-        generationText = new Text("Generation: 0");
+        generationText = new Text("Generation: " + generation);
         Button jumpToStartButton = new Button("Jump to (0, 0)");
+        Button nextGenerationButton = new Button("Step Forward");
 
         jumpToStartButton.setOnMouseClicked(e -> {
             offsetX = 0;
@@ -65,11 +67,63 @@ public class GameOfLife extends Application {
             draw(canvas.getGraphicsContext2D());
         });
 
-        HBox container = new HBox(xCoordText, yCoordText, populationText, generationText, jumpToStartButton);
+        nextGenerationButton.setOnMouseClicked(e -> {
+            nextGeneration();
+        });
+
+        HBox container = new HBox(xCoordText, yCoordText, populationText, generationText, jumpToStartButton, nextGenerationButton);
         container.setSpacing(15);
         container.setPadding(new Insets(10));
         return container;
     }
+
+    private void nextGeneration() {
+        Set<Point> newAlive = new HashSet<>();
+        Set<Point> candidates = new HashSet<>();
+
+        // All live cell and neighbors are candidates
+        for(Point p : aliveCells) {
+            candidates.add(p);
+            candidates.addAll(getNeighbors(p));
+        }
+
+        for (Point p : candidates) {
+            int aliveNeighbors = 0;
+            for(Point n : getNeighbors(p)) {
+                if (aliveCells.contains(n)) aliveNeighbors++;
+            }
+
+            if(aliveCells.contains(p)) {
+                // Survival: live cell stays alive if 2 or 3 neighbors
+                if(aliveNeighbors == 2 || aliveNeighbors == 3) {
+                    newAlive.add(p);
+                }
+            } else {
+                // Birth: dead cell becomes alive if exactly 3 neighbors
+                if(aliveNeighbors == 3) {
+                    newAlive.add(p);
+                }
+            }
+        }
+
+        aliveCells = newAlive;
+        generation++;
+        updateGameMenu();
+        draw(canvas.getGraphicsContext2D());
+    }
+
+    // Get the eight neighbors of a point
+    private Set<Point> getNeighbors(Point p) {
+    Set<Point> neighbors = new HashSet<>();
+    for(int dx = -1; dx <= 1; dx++) {
+        for(int dy = -1; dy <= 1; dy++) {
+            if(dx == 0 && dy == 0) continue; // skip the cell itself
+            neighbors.add(new Point(p.x + dx, p.y + dy));
+        }
+    }
+    return neighbors;
+}
+
 
     public Canvas drawGameCanvas() {
         canvas = new Canvas(800, 600);
@@ -114,6 +168,7 @@ public class GameOfLife extends Application {
                 draw(gc);
             }
         });
+
         return canvas;
     }
 
@@ -122,7 +177,7 @@ public class GameOfLife extends Application {
         xCoordText.setText("X: " + (int) offsetX);
         yCoordText.setText("Y: " + (int) -offsetY);
         populationText.setText("Population: " + aliveCells.size());
-        // TODO: add generation update
+        generationText.setText("Generation: " + generation);
     }
 
     // Draw the game canvas
