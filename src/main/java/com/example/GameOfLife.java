@@ -57,10 +57,23 @@ public class GameOfLife extends Application {
         Scene scene = new Scene(root, 800, 600);
 
         scene.setOnScroll(e -> {
+            double mouseX = e.getX();
+            double mouseY = e.getY();
+
+            double worldX = (mouseX + offsetX) / cellSize;
+            double worldY = (mouseY + offsetY) / cellSize;
+
+            int oldCellSize = cellSize;
+
             if (e.getDeltaY() > 0 && cellSize < 50) {
                 cellSize++;
             } else if (e.getDeltaY() < 0 && cellSize > 2) {
                 cellSize--;
+            }
+
+            if (oldCellSize != cellSize) {
+                offsetX = worldX * cellSize - mouseX;
+                offsetY = worldY * cellSize - mouseY;
             }
 
             draw(canvas.getGraphicsContext2D());
